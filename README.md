@@ -6,8 +6,12 @@ Este projeto simula o recebimento de requisições de cancelamento de débito po
 
 ## ✅ Funcionalidades
 
-- Receber requisição HTTP `POST` com `número da conta` e `mensagem`.
-- Retornar `"OK"` como resposta.
+- Receber requisição HTTP `POST` com `idTransacao` e `mensagem`.
+- Validar se a transação:
+    - Existe (mock de repositório simulado em memória).
+    - Foi realizada há no máximo 7 dias.
+- Retornar `"OK"` se válida.
+- Lançar exceções personalizadas para casos inválidos.
 - Publicar mensagem no SQS (Amazon Simple Queue Service).
 
 ---
@@ -20,6 +24,8 @@ Este projeto simula o recebimento de requisições de cancelamento de débito po
 - **Maven**
 - **Terraform**
 - **Arquitetura Hexagonal (Ports & Adapters)**
+- **JUnit 5** (testes unitários e integração)
+- **Mockito** (mocks para testes)
 
 ---
 
@@ -27,23 +33,24 @@ Este projeto simula o recebimento de requisições de cancelamento de débito po
 
 **⚠️ Atenção:** Antes de executar, edite o arquivo `src/main/resources/application.properties` com a URL real da fila SQS, que será exibida após o `terraform apply`:
 
-```
+```properties
 sqs.queue.url=https://sqs.sa-east-1.amazonaws.com/SEU_ACCOUNT_ID/NOME_DA_FILA
 ```
-
 
 ```bash
 mvn spring-boot:run
 ```
 
-### Exemplo de requisição (via Postman ou cURL)
+---
+
+### ✅ Exemplo de Requisição
 
 **POST** `http://localhost:8080/api/cancelar`
 
 ```json
 {
-  "numeroConta": "123456",
-  "mensagem": "Cancelar débito em duplicidade"
+  "idTransacao": "123",
+  "mensagem": "Cancelamento de débito indevido"
 }
 ```
 
@@ -55,6 +62,28 @@ OK
 
 ---
 
+## 🧪 Testes Automatizados
+
+### 🧩 Testes Unitários
+Cobrem o serviço de cancelamento com os seguintes cenários:
+- Transação dentro do prazo (deve ser cancelada com sucesso).
+- Transação não encontrada (exceção `TransacaoNaoEncontradaException`).
+- Transação fora do prazo de 7 dias (exceção `CancelamentoForaDoPrazoException`).
+
+### 🔁 Mock de Repositório
+O mock `TransacaoRepositoryFake` simula um repositório de transações. Ele é usado no teste de integração e retorna datas de transações para validar a lógica.
+
+### 🌐 Teste de Integração
+Testa o fluxo completo da aplicação, executando uma requisição real para a API `/api/cancelar` e verificando se a resposta e o comportamento estão corretos.
+
+Execute todos os testes com:
+
+```bash
+mvn test
+```
+
+---
+
 ## 📂 Estrutura de Diretórios (Java)
 
 A aplicação segue a **Arquitetura Hexagonal (Ports and Adapters)** com a seguinte organização:
@@ -62,20 +91,28 @@ A aplicação segue a **Arquitetura Hexagonal (Ports and Adapters)** com a segui
 ```
 cancelamento/src/main/java/br.com.cancelamento
 ├── adapters/
-│   ├── input/                # Entrada da aplicação (Controller REST)
+│   ├── input/                          # Entrada da aplicação (Controller REST)
 │   │   ├── CancelamentoController.java
 │   │   └── CancelamentoRequest.java
-│   └── output/               # Saída da aplicação (Adapter para publicar no SQS)
+│   └── output/                         # Saída da aplicação (Adapter para publicar no SQS)
 │       └── SqsPublicadorAdapter.java
-├── application/              # Casos de uso (implementações de serviços de domínio)
+├── application/                        # Casos de uso (regras de negócio)
 │   └── CancelamentoService.java
 ├── domain/
 │   └── ports/
-│       ├── input/            # Interface de entrada (Use Case)
+│       ├── input/                      # Interface de entrada (Use Case)
 │       │   └── CancelamentoUseCase.java
-│       └── output/           # Interface de saída (Port de publicação)
-│           └── PublicadorEvento.java
-└── CancelamentoApplication.java # Classe principal da aplicação (Spring Boot)
+│       └── output/                     # Interface de saída
+│           ├── PublicadorEvento.java
+│           └── TransacaoRepository.java
+├── exceptions/                         # Exceções personalizadas
+│   ├── CancelamentoForaDoPrazoException.java
+│   └── TransacaoNaoEncontradaException.java
+├── integration/                        # Teste de integração
+│   └── CancelamentoControllerIntegrationTest.java
+├── mocks/                              # Mock de repositório de transações
+│   └── TransacaoRepositoryFake.java
+├── CancelamentoApplication.java        # Classe principal da aplicação
 ```
 
 ---
@@ -87,6 +124,7 @@ cancelamento/src/main/java/br.com.cancelamento
 ```hcl
 account_id = "123456789012"
 queue_name = "cancelamento-queue"
+aws_region = "sa-east-1"
 ```
 
 2. Execute:
@@ -96,13 +134,13 @@ terraform init
 terraform apply
 ```
 
-O Terraform cria uma fila SQS e imprime a URL para ser utilizada no código.
+O Terraform cria uma fila SQS e imprime a URL para ser utilizada no `application.properties`.
 
 ---
 
 ## 📦 Collection Postman
 
-Uma collection `postman_collection.json` está incluída no projeto. Ela permite testar a API com facilidade.
+Uma collection `postman_collection.json` atualizada está incluída no projeto. Ela permite testar a API com facilidade usando `idTransacao`.
 
 ---
 
@@ -120,5 +158,3 @@ O arquivo `.gitignore` serve para **ignorar arquivos** que não devem ser versio
 ## 📋 Autor
 
 Bruno Akira – 2025
-
----

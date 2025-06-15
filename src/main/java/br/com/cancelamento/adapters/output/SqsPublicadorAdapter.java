@@ -4,6 +4,7 @@ import br.com.cancelamento.domain.ports.output.PublicadorEvento;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 
+// Classe principal da aplicação que inicia o Spring Boot
 public class SqsPublicadorAdapter implements PublicadorEvento {
 
     private final AmazonSQS sqsClient;

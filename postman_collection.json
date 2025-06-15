@@ -5,7 +5,7 @@
     },
     "item": [
         {
-            "name": "Cancelar Debito",
+            "name": "Cancelar Débito",
             "request": {
                 "method": "POST",
                 "header": [
@@ -16,7 +16,7 @@
                 ],
                 "body": {
                     "mode": "raw",
-                    "raw": "{\n    \"numeroConta\": \"123456\",\n    \"mensagem\": \"Cancelamento de debito indevido\"\n}"
+                    "raw": "{\n  \"idTransacao\": \"123\",\n  \"mensagem\": \"Solicito cancelamento da transação\"\n}"
                 },
                 "url": {
                     "raw": "http://localhost:8080/api/cancelar",
